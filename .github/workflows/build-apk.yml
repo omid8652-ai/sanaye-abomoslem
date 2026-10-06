@@ -1,0 +1,242 @@
+name: Build Sanaye Abomoslem APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK
+        run: |
+          sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+
+      - name: Create Android project
+        run: |
+          mkdir -p app/src/main/java/com/sanaye/abomoslem
+          mkdir -p app/src/main/res/values
+          mkdir -p app/src/main/assets
+
+          cat > settings.gradle <<'EOF'
+          pluginManagement {
+              repositories {
+                  google()
+                  mavenCentral()
+                  gradlePluginPortal()
+              }
+          }
+
+          dependencyResolutionManagement {
+              repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+          }
+
+          rootProject.name = "SanayeAbomoslem"
+          include(":app")
+          EOF
+
+          cat > build.gradle <<'EOF'
+          plugins {
+              id 'com.android.application' version '8.7.3' apply false
+          }
+          EOF
+
+          cat > gradle.properties <<'EOF'
+          org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
+          android.useAndroidX=true
+          EOF
+
+          cat > app/build.gradle <<'EOF'
+          plugins {
+              id 'com.android.application'
+          }
+
+          android {
+              namespace 'com.sanaye.abomoslem'
+              compileSdk 35
+
+              defaultConfig {
+                  applicationId 'com.sanaye.abomoslem'
+                  minSdk 23
+                  targetSdk 35
+                  versionCode 1
+                  versionName '1.0'
+              }
+          }
+          EOF
+
+          cat > app/src/main/res/values/styles.xml <<'EOF'
+          <resources>
+              <style name="AppTheme" parent="android:style/Theme.Material.Light.NoActionBar">
+                  <item name="android:fontFamily">sans</item>
+                  <item name="android:colorAccent">#1976D2</item>
+                  <item name="android:navigationBarColor">#000000</item>
+              </style>
+          </resources>
+          EOF
+
+          cat > app/src/main/AndroidManifest.xml <<'EOF'
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+              <application
+                  android:theme="@style/AppTheme"
+                  android:label="صنایع ابومسلم"
+                  android:usesCleartextTraffic="true">
+
+                  <activity
+                      android:name=".MainActivity"
+                      android:screenOrientation="portrait"
+                      android:exported="true">
+
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN" />
+                          <category android:name="android.intent.category.LAUNCHER" />
+                      </intent-filter>
+
+                  </activity>
+              </application>
+          </manifest>
+          EOF
+
+          cat > app/src/main/java/com/sanaye/abomoslem/MainActivity.java <<'EOF'
+          package com.sanaye.abomoslem;
+
+          import android.app.Activity;
+          import android.os.Bundle;
+          import android.webkit.WebView;
+          import android.webkit.WebSettings;
+
+          public class MainActivity extends Activity {
+              @Override
+              protected void onCreate(Bundle savedInstanceState) {
+                  super.onCreate(savedInstanceState);
+
+                  WebView webView = new WebView(this);
+                  WebSettings settings = webView.getSettings();
+                  settings.setJavaScriptEnabled(true);
+                  settings.setDomStorageEnabled(true);
+
+                  webView.loadUrl("file:///android_asset/index.html");
+                  setContentView(webView);
+              }
+          }
+          EOF
+
+          cat > app/src/main/assets/index.html <<'EOF'
+          <!DOCTYPE html>
+          <html lang="fa" dir="rtl">
+          <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width,initial-scale=1">
+          <title>صنایع ابومسلم</title>
+          <style>
+          body{
+            margin:0;
+            font-family:Arial,sans-serif;
+            background:#f3f5f7;
+            color:#222;
+          }
+          header{
+            background:#1976d2;
+            color:white;
+            padding:22px 16px;
+            text-align:center;
+          }
+          h1{margin:0;font-size:25px}
+          .sub{margin-top:8px;font-size:14px}
+          .grid{
+            display:grid;
+            grid-template-columns:1fr 1fr;
+            gap:14px;
+            padding:16px;
+          }
+          .card{
+            background:white;
+            border-radius:18px;
+            padding:25px 10px;
+            text-align:center;
+            box-shadow:0 3px 10px #0002;
+            font-size:18px;
+            font-weight:bold;
+          }
+          .icon{font-size:35px;margin-bottom:10px}
+          .info{
+            margin:16px;
+            padding:18px;
+            background:white;
+            border-radius:16px;
+            line-height:2;
+          }
+          </style>
+          </head>
+          <body>
+          <header>
+            <h1>نرم افزار صنایع ابومسلم</h1>
+            <div class="sub">طراحی، محاسبه و پیش فاکتور</div>
+          </header>
+
+          <div class="grid">
+            <div class="card">
+              <div class="icon">🪟</div>
+              UPVC
+            </div>
+
+            <div class="card">
+              <div class="icon">🌀</div>
+              کرکره برقی
+            </div>
+
+            <div class="card">
+              <div class="icon">🪟</div>
+              شیشه سکوریت
+            </div>
+
+            <div class="card">
+              <div class="icon">🚪</div>
+              اپراتور
+            </div>
+          </div>
+
+          <div class="info">
+            <b>امکانات نرم افزار:</b><br>
+            طراحی و محاسبه ابعاد<br>
+            محاسبه متریال و برش<br>
+            محاسبه قیمت به ریال<br>
+            پیش فاکتور حرفه‌ای<br>
+            ذخیره پروژه‌ها
+          </div>
+          </body>
+          </html>
+          EOF
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      - name: Build APK
+        run: gradle assembleDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: sanaye-abomoslem-apk
+          path: app/build/outputs/apk/debug/app-debug.apkg
