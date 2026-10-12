@@ -1,10 +1,11 @@
+
 name: Build Sanaye Abomoslem APK
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - main
-  workflow_dispatch:
 
 jobs:
   build:
@@ -20,13 +21,16 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: '8.9'
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Accept Android licenses
+        run: yes | sdkmanager --licenses || true
+
+      - name: Install Android packages
+        run: sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
 
       - name: Create Android project
-        shell: bash
         run: |
           mkdir -p app/src/main/java/com/sanaye/abomoslem
           mkdir -p app/src/main/res/values
@@ -40,7 +44,6 @@ jobs:
                   gradlePluginPortal()
               }
           }
-
           dependencyResolutionManagement {
               repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
               repositories {
@@ -48,9 +51,8 @@ jobs:
                   mavenCentral()
               }
           }
-
           rootProject.name = "SanayeAbomoslem"
-          include ":app"
+          include(":app")
           EOF
 
           cat > build.gradle <<'EOF'
@@ -59,20 +61,16 @@ jobs:
           }
           EOF
 
-          cat > gradle.properties <<'EOF'
-          android.useAndroidX=true
-          android.nonTransitiveRClass=true
-          EOF
+          echo "org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8" > gradle.properties
+          echo "android.useAndroidX=true" >> gradle.properties
 
           cat > app/build.gradle <<'EOF'
           plugins {
               id 'com.android.application'
           }
-
           android {
               namespace 'com.sanaye.abomoslem'
               compileSdk 35
-
               defaultConfig {
                   applicationId 'com.sanaye.abomoslem'
                   minSdk 23
@@ -87,8 +85,7 @@ jobs:
           <resources>
               <style name="AppTheme" parent="android:style/Theme.Material.Light.NoActionBar">
                   <item name="android:fontFamily">sans</item>
-                  <item name="android:windowLightStatusBar">false</item>
-                  <item name="android:statusBarColor">#17365D</item>
+                  <item name="android:colorAccent">#1976D2</item>
               </style>
           </resources>
           EOF
@@ -97,12 +94,9 @@ jobs:
           <manifest xmlns:android="http://schemas.android.com/apk/res/android">
               <application
                   android:theme="@style/AppTheme"
-                  android:label="صنایع ابومسلم"
-                  android:allowBackup="true"
-                  android:supportsRtl="true">
+                  android:label="نرم افزار صنایع ابومسلم">
                   <activity
                       android:name=".MainActivity"
-                      android:screenOrientation="portrait"
                       android:exported="true">
                       <intent-filter>
                           <action android:name="android.intent.action.MAIN"/>
@@ -118,21 +112,17 @@ jobs:
 
           import android.app.Activity;
           import android.os.Bundle;
-          import android.webkit.WebSettings;
           import android.webkit.WebView;
+          import android.webkit.WebSettings;
 
           public class MainActivity extends Activity {
               @Override
               protected void onCreate(Bundle savedInstanceState) {
                   super.onCreate(savedInstanceState);
-
                   WebView web = new WebView(this);
-                  WebSettings settings = web.getSettings();
-                  settings.setJavaScriptEnabled(true);
-                  settings.setDomStorageEnabled(true);
-                  settings.setBuiltInZoomControls(false);
-                  settings.setDisplayZoomControls(false);
-
+                  WebSettings s = web.getSettings();
+                  s.setJavaScriptEnabled(true);
+                  s.setDomStorageEnabled(true);
                   web.loadUrl("file:///android_asset/index.html");
                   setContentView(web);
               }
@@ -140,168 +130,49 @@ jobs:
           EOF
 
           cat > app/src/main/assets/index.html <<'EOF'
-          <!doctype html>
+          <!DOCTYPE html>
           <html lang="fa" dir="rtl">
           <head>
-          <meta charset="utf-8">
+          <meta charset="UTF-8">
           <meta name="viewport" content="width=device-width,initial-scale=1">
           <title>صنایع ابومسلم</title>
           <style>
-          *{box-sizing:border-box}
-          body{margin:0;background:#f2f5f8;font-family:Tahoma,Arial,sans-serif;color:#17202a}
-          header{background:#17365d;color:white;padding:20px;text-align:center}
-          header h1{margin:0;font-size:23px}
-          header p{margin:8px 0 0;font-size:13px}
-          .tabs{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:14px}
-          button{border:0;border-radius:12px;padding:14px;font-size:15px;font-weight:bold}
-          .tab{background:white;color:#17365d;box-shadow:0 2px 7px #ccd3db}
-          .tab.active{background:#17365d;color:white}
-          .card{background:white;margin:0 14px 14px;padding:16px;border-radius:16px;box-shadow:0 2px 8px #d5dbe1}
-          h2{font-size:18px;margin-top:0}
-          label{display:block;font-size:13px;margin:10px 0 5px}
-          input,select{width:100%;padding:12px;border:1px solid #ccd3db;border-radius:9px;font-size:16px}
-          .calc{width:100%;background:#1b7f45;color:white;margin-top:15px}
-          .result{margin-top:15px;background:#eef7f1;border-radius:10px;padding:12px;line-height:2;font-size:14px}
-          .hidden{display:none}
-          .price{font-weight:bold}
-          .footer{text-align:center;padding:15px;color:#65717d;font-size:12px}
+          body{font-family:Arial,sans-serif;background:#f2f5f9;margin:0;color:#222}
+          header{background:#1976d2;color:white;text-align:center;padding:24px 10px}
+          h1{font-size:23px}
+          .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:15px}
+          .card,.info{background:white;border-radius:14px;padding:22px 8px;text-align:center;box-shadow:0 2px 8px #0002}
+          .card{font-weight:bold;font-size:18px}
+          .icon{font-size:32px;margin-bottom:10px}
+          .info{margin:15px;line-height:2}
           </style>
           </head>
           <body>
           <header>
-            <h1>نرم افزار صنایع ابومسلم</h1>
-            <p>طراحی، محاسبه قیمت و پیش‌فاکتور</p>
+          <h1>نرم افزار صنایع ابومسلم</h1>
+          طراحی، محاسبه و پیش‌فاکتور
           </header>
-
-          <div class="tabs">
-            <button class="tab active" onclick="show('upvc',this)">UPVC</button>
-            <button class="tab" onclick="show('shutter',this)">کرکره برقی</button>
-            <button class="tab" onclick="show('glass',this)">شیشه سکوریت</button>
-            <button class="tab" onclick="show('operator',this)">اپراتور</button>
+          <div class="grid">
+          <div class="card"><div class="icon">🪟</div>UPVC</div>
+          <div class="card"><div class="icon">🌀</div>کرکره برقی</div>
+          <div class="card"><div class="icon">🪟</div>شیشه سکوریت</div>
+          <div class="card"><div class="icon">🚪</div>اپراتور</div>
           </div>
-
-          <section id="upvc" class="card">
-            <h2>محاسبه پنجره UPVC</h2>
-
-            <label>عرض پنجره (سانتی‌متر)</label>
-            <input id="w" type="number" value="150">
-
-            <label>ارتفاع پنجره (سانتی‌متر)</label>
-            <input id="h" type="number" value="150">
-
-            <label>نوع پنجره</label>
-            <select id="type">
-              <option>تک‌لنگه</option>
-              <option>دو لنگه</option>
-              <option>درب</option>
-            </select>
-
-            <label>پروفیل</label>
-            <select>
-              <option>MAVI</option>
-              <option>ABAYAN GREEN</option>
-              <option>HONEYCOMB</option>
-              <option>رووتک</option>
-            </select>
-
-            <label>قیمت پروفیل لنگه - ریال/متر</label>
-            <input id="p" type="number" value="850000">
-
-            <label>قیمت شیشه - ریال/مترمربع</label>
-            <input id="g" type="number" value="1800000">
-
-            <button class="calc" onclick="calc()">محاسبه</button>
-
-            <div id="result" class="result">
-              ابعاد را وارد کنید و روی محاسبه بزنید.
-            </div>
-          </section>
-
-          <section id="shutter" class="card hidden">
-            <h2>کرکره برقی</h2>
-            <label>عرض (سانتی‌متر)</label>
-            <input type="number" value="300">
-            <label>ارتفاع (سانتی‌متر)</label>
-            <input type="number" value="250">
-            <label>قیمت هر مترمربع - ریال</label>
-            <input type="number" value="0">
-            <button class="calc">محاسبه کرکره</button>
-          </section>
-
-          <section id="glass" class="card hidden">
-            <h2>شیشه سکوریت</h2>
-            <label>عرض (سانتی‌متر)</label>
-            <input type="number" value="100">
-            <label>ارتفاع (سانتی‌متر)</label>
-            <input type="number" value="200">
-            <label>ضخامت</label>
-            <select>
-              <option>4 میلی‌متر</option>
-              <option>5 میلی‌متر</option>
-              <option>6 میلی‌متر</option>
-              <option>8 میلی‌متر</option>
-              <option>10 میلی‌متر</option>
-            </select>
-            <button class="calc">محاسبه شیشه</button>
-          </section>
-
-          <section id="operator" class="card hidden">
-            <h2>درب اتوماتیک / اپراتور</h2>
-            <label>عرض دهانه (سانتی‌متر)</label>
-            <input type="number" value="150">
-            <label>ارتفاع دهانه (سانتی‌متر)</label>
-            <input type="number" value="220">
-            <button class="calc">محاسبه اپراتور</button>
-          </section>
-
-          <div class="footer">
-            صنایع ابومسلم<br>
-            09232800757 &nbsp; | &nbsp; WhatsApp: 09366354407
+          <div class="info">
+          <b>صنایع ابومسلم</b><br>
+          محاسبه قیمت به ریال<br>
+          طراحی و محاسبه متریال<br>
+          تلفن: 09232800757<br>
+          واتساپ: 09366354407
           </div>
-
-          <script>
-          function show(id,btn){
-            document.querySelectorAll('section').forEach(x=>x.classList.add('hidden'));
-            document.getElementById(id).classList.remove('hidden');
-            document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
-            btn.classList.add('active');
-          }
-
-          function calc(){
-            let w=Number(document.getElementById('w').value);
-            let h=Number(document.getElementById('h').value);
-            let pp=Number(document.getElementById('p').value);
-            let gp=Number(document.getElementById('g').value);
-
-            let mullion=w-12;
-            let sashW=(w-28)/2;
-            let sashH=h-14;
-            let glassW=sashW-6;
-            let glassH=sashH-6;
-
-            let profile=((2*sashW+2*sashH)*2+mullion)/100;
-            let glass=(glassW*glassH*2)/10000;
-            let profileCost=profile*pp;
-            let glassCost=glass*gp;
-            let subtotal=profileCost+glassCost;
-            let profit=subtotal*.10;
-            let total=subtotal+profit;
-
-            document.getElementById('result').innerHTML=
-              '<b>نتیجه محاسبه</b><br>'+
-              'مولیون: '+mullion.toFixed(1)+' سانتی‌متر<br>'+
-              'لنگه: '+sashW.toFixed(1)+' × '+sashH.toFixed(1)+' سانتی‌متر<br>'+
-              'شیشه: '+glassW.toFixed(1)+' × '+glassH.toFixed(1)+' سانتی‌متر<br>'+
-              'متراژ تقریبی پروفیل: '+profile.toFixed(2)+' متر<br>'+
-              'مساحت شیشه: '+glass.toFixed(2)+' مترمربع<br>'+
-              'جمع مصالح: '+Math.round(subtotal).toLocaleString('fa-IR')+' ریال<br>'+
-              'سود ۱۰٪: '+Math.round(profit).toLocaleString('fa-IR')+' ریال<br>'+
-              '<b>قیمت نهایی: '+Math.round(total).toLocaleString('fa-IR')+' ریال</b>';
-          }
-          </script>
           </body>
           </html>
           EOF
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
 
       - name: Build APK
         run: gradle assembleDebug
@@ -310,4 +181,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: sanaye-abomoslem-apk
-          path: app/build/outputs/apk/debug/app-debug.apkg
+          path: app/build/outputs/apk/debug/app-debug.apk
